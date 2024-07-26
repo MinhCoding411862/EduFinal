@@ -21,6 +21,10 @@ from elevenlabs.client import ElevenLabs
 import mysql.connector
 from mysql.connector import Error
 import datetime
+from dashboard import Dashboard  # Import the Dashboard class
+# from threshold_adjuster import ThresholdAdjuster
+from meal_plan_extractor import MealPlanExtractor
+
 class SessionManager:
     def __init__(self, db):
         self.db = db
@@ -334,6 +338,7 @@ class WorkoutApp(QMainWindow):
         # Initialize workout plan and widget
         self.workout_plan = []
         self.workout_plan_widget = None
+        self.meal_plan = None  # Add this line
 
         # Create and add the theme toggle switch
         self.theme_toggle = ToggleSwitch()
@@ -388,7 +393,8 @@ class WorkoutApp(QMainWindow):
         self.gemini_api_key = "AIzaSyAnDOY0QfkgyucCZ8r323YiQ1ZULqGGWwc"
         self.workout_extractor = WorkoutExtractor(self.gemini_api_key)
         self.current_exercise = None
-        
+        self.meal_plan_extractor = MealPlanExtractor(self.gemini_api_key)
+
         genai.configure(api_key=self.gemini_api_key)
         self.genai_model = genai.GenerativeModel(
             model_name='gemini-1.5-flash', 
@@ -407,9 +413,6 @@ class WorkoutApp(QMainWindow):
         self.workout_timer = QTimer(self)
         self.workout_timer.timeout.connect(self.main_workout_loop)
         self.workout_timer.start(30)  # Update every 30ms
-
-
-
 
         # Create chat interface
         self.create_chat_interface()
@@ -979,6 +982,12 @@ class WorkoutApp(QMainWindow):
                 self.survey_widget.hide()
             self.show_chat_interface()
 
+    def show_dashboard(self, email):
+        if self.dashboard is None:
+            self.dashboard = Dashboard(self.meal_plan)  # Pass meal_plan here
+        self.central_stacked_widget.addWidget(self.dashboard)
+        self.central_stacked_widget.setCurrentWidget(self.dashboard)
+
     
     def convert_landmarks_to_dict(self, landmarks):
         landmark_dict = {}
@@ -1080,7 +1089,54 @@ class WorkoutApp(QMainWindow):
         worker.signals.error.connect(self.handle_ai_error)
         
         self.threadpool.start(worker)
+        self.prompt_for_meal_plan()
 
+    def prompt_for_meal_plan(self):
+        if hasattr(self, 'survey_data') and self.survey_data:
+            self.add_message("Do you want to create a 7-day meal plan based on your survey information too?", False)
+            self.chat_input.setPlaceholderText("Type 'Yes' or 'No'")
+            self.chat_input.returnPressed.connect(self.handle_meal_plan_response)
+        else:
+            self.add_message("Please complete the survey before creating a meal plan.", False)
+    
+    def handle_meal_plan_response(self):
+        response = self.chat_input.text().lower()
+        self.chat_input.clear()
+        self.add_message(response, True)
+        
+        if response == "yes":
+            self.generate_meal_plan()
+        else:
+            self.add_message("Alright, no meal plan will be created.", False)
+        
+        self.chat_input.setPlaceholderText("Type your message here...")
+        self.chat_input.returnPressed.disconnect(self.handle_meal_plan_response)
+        self.chat_input.returnPressed.connect(self.send_message)
+    
+    def generate_meal_plan(self):
+        self.add_message("Generating your 7-day meal plan...", False)
+        if hasattr(self, 'survey_data') and self.survey_data:
+            self.meal_plan = self.meal_plan_extractor.extract_meal_plan(self.survey_data)
+            self.display_meal_plan(self.meal_plan)
+        else:
+            error_message = "Error: Survey data is not available. Please complete the survey first."
+            self.add_message(error_message, False)
+            print(error_message)  # For debugging purposes
+    
+    def display_meal_plan(self, meal_plan):
+        meal_plan_text = self.format_meal_plan(meal_plan)
+        self.add_message(meal_plan_text, False)
+        self.add_message("Your 7-day meal plan has been created and is displayed above.", False)
+    
+    def format_meal_plan(self, meal_plan):
+        formatted_plan = "7-Day Meal Plan:\n\n"
+        for day in meal_plan:
+            formatted_plan += f"{day['day']}:\n"
+            for meal, food in day['meals'].items():
+                formatted_plan += f"  {meal.capitalize()}: {food}\n"
+            formatted_plan += "\n"
+        return formatted_plan
+    
     def create_content_area(self):
         # Home Tab
         home_layout = QVBoxLayout(self.home_tab)

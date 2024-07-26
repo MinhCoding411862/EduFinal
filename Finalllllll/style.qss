@@ -314,7 +314,7 @@ QLineEdit#passwordInput {
 }
 
 #weight1:focus, #height1:focus, #activitycombo:focus, #goalcombo:focus, #dietarycombo:focus {
-    border: 1px solid #6C5CE7;
+    border: 1px solid  #4CAF50;
 }
 
 
