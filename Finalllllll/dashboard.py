@@ -223,86 +223,97 @@ class Dashboard(QMainWindow):
         frame.setStyleSheet("background-color: #1e1e1e; color: #ffffff;")
         layout = QVBoxLayout(frame)
 
-        title = QLabel("Daily Exercise Progress")
+        # Create a container for the title and description
+        header_container = QWidget()
+        header_layout = QVBoxLayout(header_container)
+        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title = QLabel("Weekly Exercise Progress")
         title.setObjectName("widgetTitle")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #ffffff;")
-        layout.addWidget(title)
+        title.setStyleSheet("font-size: 25px; font-weight: bold; color: #ffffff;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(title)
 
-        chart = QChart()
-        series = QStackedBarSeries()
-
-        squat_set = QBarSet("Squat")
-        squat_set.setColor(QColor("#FF6B6B"))
-        bicep_curl_set = QBarSet("Bicep Curl")
-        bicep_curl_set.setColor(QColor("#4ECDC4"))
-        push_up_set = QBarSet("Push Up")
-        push_up_set.setColor(QColor("#45B7D1"))
+        layout.addWidget(header_container)
 
         # Fetch data from the database
         chart_data, _ = get_score_data()
 
-        # Only display the last 7 days
-        chart_data = chart_data[-7:]
+        if not chart_data:
+            # No data available
+            no_data_label = QLabel("No exercise data available. Start working out to see your progress!")
+            no_data_label.setWordWrap(True)
+            no_data_label.setStyleSheet("font-size: 14px; color: #aaaaaa; margin-top: 10px;")
+            no_data_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(no_data_label)
+        else:
+            # Only display the last 7 days
+            chart_data = chart_data[-7:]
 
-        dates = []
-        for row in chart_data:
-            dates.append(row['score_date'].strftime('%b %d'))
-            squat_set.append(row['squat_points'])
-            bicep_curl_set.append(row['bicep_curl_points'])
-            push_up_set.append(row['push_up_points'])
+            chart = QChart()
+            series = QStackedBarSeries()
 
-        series.append(squat_set)
-        series.append(bicep_curl_set)
-        series.append(push_up_set)
+            squat_set = QBarSet("Squat")
+            squat_set.setColor(QColor("#FF6B6B"))
+            bicep_curl_set = QBarSet("Bicep Curl")
+            bicep_curl_set.setColor(QColor("#4ECDC4"))
+            push_up_set = QBarSet("Push Up")
+            push_up_set.setColor(QColor("#45B7D1"))
 
-        chart.addSeries(series)
+            dates = []
+            for row in chart_data:
+                dates.append(row['score_date'].strftime('%b %d'))
+                squat_set.append(row['squat_points'])
+                bicep_curl_set.append(row['bicep_curl_points'])
+                push_up_set.append(row['push_up_points'])
 
-        axis_x = QBarCategoryAxis()
-        axis_x.append(dates)
-        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
-        series.attachAxis(axis_x)
+            series.append(squat_set)
+            series.append(bicep_curl_set)
+            series.append(push_up_set)
 
-        axis_y = QValueAxis()
-        max_points = max(row['total_points'] for row in chart_data)
-        axis_y.setRange(0, max_points)
-        axis_y.setTickCount(6)
-        axis_y.setLabelFormat("%d")
-        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
-        series.attachAxis(axis_y)
+            chart.addSeries(series)
 
-        # Style the chart for dark theme
-        chart.setBackgroundVisible(True)
-        chart.setBackgroundBrush(QColor("#2d2d2d"))
-        chart.setPlotAreaBackgroundVisible(False)
-        chart.setMargins(QMargins(10, 10, 10, 10))
+            axis_x = QBarCategoryAxis()
+            axis_x.append(dates)
+            chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+            series.attachAxis(axis_x)
 
-        axis_y.setGridLineVisible(True)
-        axis_y.setGridLineColor(QColor("#3a3a3a"))
-        axis_x.setGridLineVisible(False)
+            axis_y = QValueAxis()
+            max_points = max(row['total_points'] for row in chart_data)
+            axis_y.setRange(0, max_points)
+            axis_y.setTickCount(6)
+            axis_y.setLabelFormat("%d")
+            chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+            series.attachAxis(axis_y)
 
-        axis_x.setLabelsColor(QColor("#ffffff"))
-        axis_y.setLabelsColor(QColor("#ffffff"))
+            # Style the chart for dark theme
+            chart.setBackgroundVisible(True)
+            chart.setBackgroundBrush(QColor("#2d2d2d"))
+            chart.setPlotAreaBackgroundVisible(False)
+            chart.setMargins(QMargins(10, 10, 10, 10))
 
-        font = QFont()
-        font.setPointSize(8)
-        axis_x.setLabelsFont(font)
-        axis_y.setLabelsFont(font)
+            axis_y.setGridLineVisible(True)
+            axis_y.setGridLineColor(QColor("#3a3a3a"))
+            axis_x.setGridLineVisible(False)
 
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
-        chart.legend().setFont(font)
-        chart.legend().setLabelColor(QColor("#ffffff"))
-        chart.setTitle("")
+            axis_x.setLabelsColor(QColor("#ffffff"))
+            axis_y.setLabelsColor(QColor("#ffffff"))
 
-        chart_view = CustomChartView(chart)
-        chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        chart_view.setMinimumHeight(300)
-        layout.addWidget(chart_view)
+            font = QFont()
+            font.setPointSize(8)
+            axis_x.setLabelsFont(font)
+            axis_y.setLabelsFont(font)
 
-        description = QLabel("Each exercise contributes points to the daily score. The stacked bars show the breakdown of exercises performed each day.")
-        description.setWordWrap(True)
-        description.setStyleSheet("font-size: 12px; color: #aaaaaa; margin-top: 10px;")
-        layout.addWidget(description)
+            chart.legend().setVisible(True)
+            chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
+            chart.legend().setFont(font)
+            chart.legend().setLabelColor(QColor("#ffffff"))
+            chart.setTitle("")
+
+            chart_view = CustomChartView(chart)
+            chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+            chart_view.setMinimumHeight(300)
+            layout.addWidget(chart_view)
 
         return frame
 
