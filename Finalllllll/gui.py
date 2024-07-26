@@ -1,5 +1,6 @@
 import sys
 import cv2
+import json
 import os
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -22,7 +23,7 @@ import mysql.connector
 from mysql.connector import Error
 import datetime
 from dashboard import Dashboard  # Import the Dashboard class
-# from threshold_adjuster import ThresholdAdjuster
+from threshold_adjuster import ThresholdAdjuster
 from meal_plan_extractor import MealPlanExtractor
 
 class SessionManager:
@@ -323,6 +324,7 @@ class WorkoutApp(QMainWindow):
         self.setStyleSheet(self.dark_style)
 
         self.scoreboard = ScoreBoard()  
+        self.dashboard = None
 
 
         # Create central stacked widget
@@ -394,6 +396,8 @@ class WorkoutApp(QMainWindow):
         self.workout_extractor = WorkoutExtractor(self.gemini_api_key)
         self.current_exercise = None
         self.meal_plan_extractor = MealPlanExtractor(self.gemini_api_key)
+        self.threshold_adjuster = ThresholdAdjuster(self.gemini_api_key)
+        self.setup_threshold_chat()
 
         genai.configure(api_key=self.gemini_api_key)
         self.genai_model = genai.GenerativeModel(
@@ -473,9 +477,72 @@ class WorkoutApp(QMainWindow):
             except Exception as e:
                 print(f"Error removing temporary audio file: {str(e)}")
 
+    def save_thresholds(self):
+        with open(self.threshold_file, 'w') as f:
+            json.dump(self.video_processor.thresholds, f)
+
+    def load_thresholds(self):
+        if os.path.exists(self.threshold_file):
+            with open(self.threshold_file, 'r') as f:
+                loaded_thresholds = json.load(f)
+                self.video_processor.thresholds.update(loaded_thresholds)
+
+
     def on_media_status_changed(self, status):
         if status == QMediaPlayer.MediaStatus.EndOfMedia:
             self.stop_button.setVisible(False)
+            
+    def setup_threshold_chat(self):
+        chat_widget = QWidget()
+        chat_layout = QVBoxLayout(chat_widget)
+
+        self.threshold_chat_display = QTextEdit()
+        self.threshold_chat_display.setReadOnly(True)
+        chat_layout.addWidget(self.threshold_chat_display)
+
+        self.threshold_chat_input = QLineEdit()
+        self.threshold_chat_input.setPlaceholderText("Change the feedback behavior here (e.g., 'Increase the squat too deep threshold')...")
+        self.threshold_chat_input.returnPressed.connect(self.process_threshold_adjustment)
+        chat_layout.addWidget(self.threshold_chat_input)
+
+        self.right_layout.addWidget(chat_widget)
+
+
+    def process_threshold_adjustment(self):
+        user_input = self.threshold_chat_input.text()
+        self.threshold_chat_input.clear()
+
+        new_threshold, _, _ = self.threshold_adjuster.adjust_threshold(user_input, self.video_processor.thresholds)
+        
+        if new_threshold is not None:
+            response = self.threshold_adjuster.model.generate_content(self.threshold_adjuster.generate_prompt(user_input, self.video_processor.thresholds))
+            result = self.threshold_adjuster.extract_json_from_response(response.text)
+            
+            if result and 'feedback_condition' in result:
+                feedback_condition = result['feedback_condition']
+                threshold_key = feedback_condition  # Use only the feedback condition as the key
+                
+                if threshold_key in self.video_processor.thresholds:
+                    old_threshold = self.video_processor.thresholds[threshold_key]
+                    self.video_processor.thresholds[threshold_key] = new_threshold
+                    self.save_thresholds()  # Save thresholds immediately after updating
+                    message = f"Adjusted {threshold_key} from {old_threshold} to {new_threshold} degrees."
+                    self.threshold_chat_display.append(message)
+                    
+                    # Use text-to-speech for successful adjustments
+                    speech_message = f"Threshold adjusted. {threshold_key} is now set to {new_threshold} degrees."
+                    self.text_to_speech(speech_message)
+                else:
+                    message = f"Error: Invalid threshold key '{threshold_key}'. Available keys are: {', '.join(self.video_processor.thresholds.keys())}"
+                    self.threshold_chat_display.append(message)
+            else:
+                message = "Error: Invalid response from AI. Please try again."
+                self.threshold_chat_display.append(message)
+        else:
+            message = "Error: Failed to determine new threshold. Please try again with different wording."
+            self.threshold_chat_display.append(message)
+
+        print(message)  # This will print the message to the console for debugging
 
     def stop_audio(self):
         if self.is_speaking and self.current_audio:

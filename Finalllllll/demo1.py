@@ -171,7 +171,7 @@ class AngleCalculator:
             return None
 
 class ExerciseCounter:
-    def __init__(self, analyze_squat_form_callback):
+    def __init__(self, analyze_squat_form_callback, thresholds):
         self.curl_counter = 0
         self.bicep_curl_state = BicepCurlState.IDLE
         self.bicep_curl_analyzer = BicepCurlAnalyzer()
@@ -188,7 +188,8 @@ class ExerciseCounter:
         self.squat_threshold = 80  # Adjust this value based on your needs
         self.start_threshold = 160  # Threshold to detect the start of a squat
 
-        self.bicep_curl_analyzer = BicepCurlAnalyzer()
+        self.thresholds = thresholds
+        self.bicep_curl_analyzer = BicepCurlAnalyzer(thresholds)
 
         self.is_curling = False
         self.curl_start_detected = False
@@ -330,7 +331,8 @@ class ExerciseCounter:
         self.total_reps = total_reps
 
 class BicepCurlAnalyzer:
-    def __init__(self):
+    def __init__(self, thresholds):
+        self.thresholds = thresholds
         self.start_shoulder_pos = None
         self.start_hip_pos = None
         self.start_elbow_pos = None
@@ -422,29 +424,29 @@ class BicepCurlAnalyzer:
 
         self.feedback = []
         has_issues = False
-        # Update elbow detection confidence
-        self.elbow_detection_confidence = self.calculate_elbow_confidence(shoulder, elbow, wrist)
 
-        # Check for swinging (using momentum)
-        shoulder_movement = ((shoulder[0] - self.start_shoulder_pos[0])**2 + 
-                            (shoulder[1] - self.start_shoulder_pos[1])**2)**0.5
-        if shoulder_movement > self.shoulder_movement_threshold:
-            self.feedback.append("Keep your upper arm still")
+        # Check for full extension
+        if bicep_angle > self.thresholds['bicep_curl_not_low_enough']:
+            self.feedback.append("Extend your arm fully at the bottom")
+            has_issues = True
+
+        # Check for full curl
+        if bicep_angle > self.thresholds['bicep_curl_not_high_enough'] and current_state == BicepCurlState.CURL_UP:
+            self.feedback.append("Curl the weight higher")
             has_issues = True
 
         # Check elbow movement
         elbow_movement = ((elbow[0] - self.start_elbow_pos[0])**2 + 
                         (elbow[1] - self.start_elbow_pos[1])**2)**0.5
-        if elbow_movement > self.elbow_movement_threshold:
-            self.feedback.append("Keep your elbow in place")
+        if elbow_movement > self.thresholds['bicep_curl_elbow_movement']:
+            self.feedback.append("Keep your elbow still")
             has_issues = True
 
         # Check for body swinging
         if self.detect_body_swing(hip_shoulder_angle):
-            swing_severity = "slightly" if self.max_swing_angle <= 20 else "excessively"
+            swing_severity = "slightly" if self.max_swing_angle <= self.thresholds['bicep_curl_body_swing'] else "excessively"
             self.feedback.append(f"Your body is {swing_severity} swinging. Keep your body stable.")
             has_issues = True
-
         # Check for excessive elbow movement
         if elbow_torso_angle is not None:
             smoothed_elbow_angle = self.update_elbow_angle(elbow_torso_angle)
@@ -510,11 +512,26 @@ class VideoProcessor:
         self.cap = cv2.VideoCapture(0)
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
         self.posture_analyzer = PostureAnalyzer(self.fps)
-        self.squat_feedback = []
-        self.bicep_curl_analyzer = BicepCurlAnalyzer()
-        self.exercise_counter = ExerciseCounter(self.analyze_squat_form)
-        self.bicep_curl_feedback = []
         self.visibility_threshold = visibility_threshold
+        
+        # Define thresholds first
+        self.thresholds = {
+            'squat_too_deep': 68,
+            'squat_not_deep_enough': 91,
+            'squat_forward_bend_too_little': 19,
+            'squat_forward_bend_too_much': 50,
+            'bicep_curl_not_low_enough': 160,
+            'bicep_curl_not_high_enough': 90,
+            'bicep_curl_elbow_movement': 5,
+            'bicep_curl_body_swing': 10
+        }
+        
+        # Initialize components that require thresholds
+        self.bicep_curl_analyzer = BicepCurlAnalyzer(self.thresholds)
+        self.exercise_counter = ExerciseCounter(self.analyze_squat_form, self.thresholds)
+        
+        self.squat_feedback = []
+        self.bicep_curl_feedback = []
         self.current_exercise = None
 
         self.exercise_data = {
@@ -530,22 +547,26 @@ class VideoProcessor:
     def analyze_squat_form(self, back_angle, knee_angle):
         feedback = []
         
-        # Only analyze form if not in IDLE state (knee angle less than start_threshold)
         if knee_angle < self.exercise_counter.start_threshold:
-            if back_angle < 19:
+            if back_angle < self.thresholds['squat_forward_bend_too_little']:
                 feedback.append("Bend forward more")
-            elif back_angle > 50:
+            elif back_angle > self.thresholds['squat_forward_bend_too_much']:
                 feedback.append("Forward bending too much")
             
-            if knee_angle < 68:
-                feedback.append("Lower your hips")
-            elif knee_angle >= 91:
+            if knee_angle < self.thresholds['squat_too_deep']:
                 feedback.append("Don't squat too deep")
+            elif knee_angle >= self.thresholds['squat_not_deep_enough']:
+                feedback.append("Lower your hips")
             
             if not feedback:
                 feedback.append("Correct form")
         
         return feedback
+    
+    def update_threshold(self, exercise, feedback_condition, new_threshold):
+        threshold_key = f"{exercise}_{feedback_condition}"
+        if threshold_key in self.thresholds:
+            self.thresholds[threshold_key] = new_threshold
     
 
     def process_frame(self, frame, current_exercise):

@@ -75,34 +75,36 @@ class ThresholdAdjuster:
 
     def generate_prompt(self, user_input, current_thresholds):
         prompt = f"""
-        As an AI Fitness Assistant, your task is to interpret the user's request to adjust an exercise form threshold. The user is providing sufficient information, so you must make a determination based on the given input.
+        As an precise AI Fitness Assistant, your task is to accurately interpret the user's request to adjust an exercise form threshold to fit with the user's unique anatomy to help them have a better workout feedback. The user has provided sufficient information, so you must generate with an accurate response based on the user's request as well as the format requirement. 
 
         Current thresholds:
         {json.dumps(current_thresholds, indent=2)}
 
-        User's adjustment request: "{user_input}"
+        Here's the User's adjustment request to format:  "{user_input}"
 
-        Guidelines:
-        1. You MUST identify the exercise (squat or bicep_curl), the feedback condition, and the adjustment direction (increase or decrease).
-        2. If the exercise is not explicitly mentioned, infer it from context. Default to 'squat' if truly ambiguous.
+        Follow these guidelines exactly:
+        1. You MUST identify the exercise (squat or bicep_curl), the feedback condition, and the adjustment direction (increase or decrease). 
+        2. If the exercise is not explicitly mentioned, infer it from context. But the user will most likely include the name of the workout either "curl" (or "bicep curl") or "squat".
         3. Match the feedback condition to the closest predefined condition, even if it's not an exact match.
-        4. If the adjustment direction is not clear, make a reasonable inference based on the context.
-        5. Always suggest a new threshold value that makes sense for the exercise and condition.
+        4. The user's request will be guaranteed to contain sufficient information so try your best to give the user the best and most accurate response.
+        5. Always suggest a new threshold value that makes sense for the exercise and the user's condition.
+        6. Do not deviate from the guidelines or the formating requirement.
 
-        Possible feedback conditions:
+        Possible feedback conditions (the user prompt might not be exactly the same as these following but you have to keep the feedback condition format exactly like the following ):
         Squat: squat_too_deep, squat_not_deep_enough, squat_forward_bend_too_little, squat_forward_bend_too_much
         Bicep Curl: bicep_curl_not_low_enough, bicep_curl_not_high_enough, bicep_curl_elbow_movement, bicep_curl_body_swing
 
-        You MUST respond with a JSON object containing:
+        You MUST respond with a valid JSON object containing exacty and strictly 4 objects. 
+        Expected output format:
         {{
           "exercise": "squat" or "bicep_curl",
           "feedback_condition": <matched_condition>,
           "adjustment": "increase" or "decrease",
-          "new_threshold": <suggested_new_value>,
-          "confidence": <value_between_0_and_1>
+          "new_threshold": <suggested_new_value>
         }}
-
-        Analyze the user's input carefully and provide your best interpretation, even if you're not 100% certain. Use the confidence field to indicate your level of certainty in your interpretation.
+        DO not include any excessive or any other explaination. Only include the main content of the JSON object. 
+        Format the provided user request strictly according to these instructions and example.
+        Analyze the user's input carefully and provide your best interpretation, even if you're not 100% certain. 
         """
         return prompt
 
@@ -138,18 +140,7 @@ class ThresholdAdjuster:
                 if new_threshold is None:
                     raise ValueError("No new threshold provided in the response")
 
-                confidence = result.get("confidence", 0.5)  # Default to 0.5 if not provided
-
-                # Log any mismatches for debugging, but proceed with the AI's interpretation
-                if parsed_exercise and result.get("exercise") != parsed_exercise:
-                    self.logger.info(f"Exercise interpretation: parsed {parsed_exercise}, AI suggested {result.get('exercise')}")
-                if parsed_feedback and result.get("feedback_condition") != parsed_feedback:
-                    self.logger.info(f"Feedback condition interpretation: parsed {parsed_feedback}, AI suggested {result.get('feedback_condition')}")
-                if parsed_adjustment and result.get("adjustment") != parsed_adjustment:
-                    self.logger.info(f"Adjustment interpretation: parsed {parsed_adjustment}, AI suggested {result.get('adjustment')}")
-
-                explanation = f"Adjusted threshold for {result.get('exercise')} {result.get('feedback_condition')} to {new_threshold}"
-                return new_threshold, explanation, confidence
+                return new_threshold, "", 1  # Returning empty string for explanation and 1 for confidence
 
             except Exception as e:
                 self.logger.error(f"Error on attempt {attempt + 1}: {str(e)}")
@@ -163,7 +154,6 @@ class ThresholdAdjuster:
                     adjustment = parsed_adjustment or "increase"  # Default to increase if not parsed
                     current_value = current_thresholds.get(f"{exercise}_{feedback_condition}", 90)  # Default to 90 if not found
                     new_threshold = current_value + 5 if adjustment == "increase" else current_value - 5
-                    explanation = f"Best guess: Adjusted threshold for {exercise} {feedback_condition} to {new_threshold}"
-                    return new_threshold, explanation, 0.5  # Low confidence for best guess
+                    return new_threshold, "", 1  # Returning empty string for explanation and 1 for confidence
 
-        return None, "Failed to process the request. Please try again with different wording.", 0
+        return None, "Failed to process the request. Please try again with different wording.", 1  # Returning 1 for confidence
