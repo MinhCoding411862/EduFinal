@@ -1,0 +1,415 @@
+/* style.qss - Dark Theme */
+
+QMainWindow, QWidget {
+    background-color: #1e1e1e;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+QDialog {
+    background-color: #2d2d2d;
+    color: white;
+}
+
+QTabWidget::pane {
+    border: none;
+    background-color: #2d2d2d;
+    border-radius: 15px;
+}
+
+QTabBar::tab {
+    background-color: #3d3d3d;
+    color: white;
+    padding: 10px 20px;
+    margin-right: 5px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+
+QTabBar::tab:selected {
+    background-color: #4CAF50;
+    color: white;
+}
+
+QPushButton {
+    background-color: #2196F3;  /* Blue background */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #1976D2;  /* Darker blue on hover */
+}
+
+QLabel {
+    color: white;
+    font-size: 14px;
+}
+
+QListWidget {
+    background-color: #2d2d2d;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+QListWidget::item:selected {
+    background-color: #4CAF50;
+    border-radius: 5px;
+}
+
+QFrame {
+    background-color: #2d2d2d;
+    border-radius: 15px;
+}
+
+QLineEdit, QComboBox, QTextEdit {
+    background-color: #3d3d3d;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    color: white;
+    padding: 5px;
+    font-size: 14px;
+}
+
+QScrollArea {
+    background-color: #1e1e1e;
+    border: none;
+}
+
+QScrollBar:vertical {
+    border: none;
+    background-color: #2d2d2d;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #3d3d3d;
+    min-height: 20px;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* Custom Widget Styles, I delete this code background-color: #2d2d2d; */
+#surveyWidget, #chatWidget {
+    border-radius: 15px;
+    padding: 20px;
+}
+QListWidget {
+    background-color: #F0F0F0;
+    border: none;
+}
+
+QListWidget::item {
+    background-color: transparent;
+    padding: 5px;
+}
+
+ChatBubble {
+    font-size: 14px;
+    line-height: 1.4;
+}
+#exerciseInfoFrame {
+    background-color: #2d2d2d;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+#exerciseNameLabel {
+    color: #4CAF50;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#repCountLabel, #feedbackLabel {
+    color: white;
+    font-size: 16px;
+}
+
+/* Home Tab Styles */
+SplitScreen {
+    background-color: #1E1E1E;
+}
+
+SplitScreen QLabel {
+    color: white;
+}
+
+SplitScreen QPushButton {
+    background-color: #8E44AD;
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    margin: 4px 2px;
+    border-radius: 5px;
+}
+
+SplitScreen QPushButton:hover {
+    background-color: #9B59B6;
+}
+
+SplitScreen QLineEdit {
+    padding: 12px;
+    border: 1px solid #555555;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #3A3A3A;
+    color: white;
+}
+
+SplitScreen QLineEdit:focus {
+    border-color: #777777;
+}
+
+SplitScreen #loginLink {
+    border: none;
+    background-color: transparent;
+    color: white;
+}
+
+SplitScreen FeatureItem QLabel {
+    color: white;
+}
+
+SplitScreen FeatureItem QLabel[isTitle="true"] {
+    font-weight: bold;
+}
+
+SplitScreen #testimonialWidget {
+    background-color: #2D2D2D;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+SplitScreen #testimonialText {
+    color: #888888;
+    font-style: italic;
+}
+
+SplitScreen #leftPanel {
+    background-color: #1E1E1E;
+}
+
+SplitScreen #rightPanel {
+    background-color: #2D2D2D;
+}
+
+QPushButton#signInButton {
+    border-radius: 20px;  /* Adjust this value for desired roundness */
+}
+
+QPushButton#signInButton:hover {
+    border-radius: 20px;  /* Adjust this value for desired roundness */
+}
+
+QPushButton#googleButton {
+    border-radius: 20px;  /* Adjust this value for desired roundness */
+}
+
+QPushButton#passwordToggle {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    width: 30px;
+    height: 30px;
+}
+
+QLineEdit#passwordInput {
+    border-radius: 20px;
+    padding-right: 30px;
+}
+
+#haming{
+        background-color: transparent;
+}
+
+#rememberMe{
+        background-color: transparent;
+}
+
+#forgotPassword{
+    background-color: transparent;
+    text-decoration: underline;
+    font-size: 14px;
+}
+
+#signinbutton{
+    background-color: #2196F3;  /* Blue background */
+    border-radius: 20px;
+}
+
+#loginLink {
+    background-color: transparent;
+}
+
+#email{ 
+    border-radius: 20px;
+}
+
+#googlesign{
+    background-color: white;
+    border: 1px solid #dadce0;
+    color: #3c4043;
+    padding: 8px 12px;
+    text-align: center;
+    border-radius: 20px;
+}
+
+#googlesign:hover{
+    background-color: transparent;
+    color: #000000;
+}
+
+#button12{
+    border-radius: 20px;
+}
+
+#welcomeback{
+    text-decoration: bold;
+    font-size: 40px;
+}
+
+#applebutton{
+    background-color: white;
+    border: 1px solid #dadce0;
+    border-radius: 20px;
+    color: black;
+    padding: 8px 16px;
+    text-align: center;
+}
+
+/* Dark mode styles for survey form */
+
+#surveyWidget {
+    background-color: #1E1E1E;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+#surveyWidget QLabel {
+    color: #FFFFFF;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+#weight1, #height1, #activitycombo, #goalcombo, #dietarycombo {
+    background-color: #2D2D2D;
+    border: 1px solid #3D3D3D;
+    border-radius: 5px;
+    color: #FFFFFF;
+    padding: 8px;
+    font-size: 14px;
+}
+
+#weight1:focus, #height1:focus, #activitycombo:focus, #goalcombo:focus, #dietarycombo:focus {
+    border: 1px solid #6C5CE7;
+}
+
+
+#activitycombo::drop-down, #goalcombo::drop-down, #dietarycombo::drop-down {
+    border: none;
+    background-color: #3D3D3D;
+    width: 30px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+#activitycombo::down-arrow, #goalcombo::down-arrow, #dietarycombo::down-arrow {
+    image: url("C:\Users\ADMIN\Downloads\hackathon4.0\dropdown.png");
+}
+
+#submitbutton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6C5CE7, stop:1 #A29BFE);
+    border: none;
+    border-radius: 15px;
+    color: #FFFFFF;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#submitbutton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5A4ED1, stop:1 #8B84E0);
+}
+
+/* Styles for instruction labels */
+#weightLabel, #heightLabel, #genderLabel, #activityLabel, #goalLabel, #intensityLabel {
+    font-size: 14px;
+    font-style: italic;
+    margin-top: 10px;
+    margin-bottom: 2px;
+    background-color: transparent;
+}
+
+#inputContainer {
+    background-color: white;
+    border: 1px solid #E5E5E5;
+    border-radius: 8px;
+    min-height: 40px;
+    max-height: 40px;
+}
+
+#askAI {
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: transparent;
+}
+
+#askAI:focus {
+    outline: none;
+}
+
+#sendButton {
+    background-color: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #5A5A5A;
+}
+
+#sendButton:hover {
+    color: #2D2D2D;
+}
+
+#sendButton:pressed {
+    color: #1A1A1A;
+}
+
+#activityButtonGroup QRadioButton::indicator, 
+#genderButtonGroup QRadioButton::indicator, 
+#goalButtonGroup QRadioButton::indicator {
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        border: 2px solid #3D3D3D;
+    }
+
+#surveyWidget #activityButtonGroup QRadioButton::indicator:checked, 
+#surveyWidget #genderButtonGroup QRadioButton::indicator:checked, 
+#surveyWidget #goalButtonGroup QRadioButton::indicator:checked {
+    background-color: #4CAF50;
+    border: 2px solid #4CAF50;
+}
+
+#activityButtonGroup QRadioButton, 
+#genderButtonGroup QRadioButton, 
+#goalButtonGroup QRadioButton {
+        color: #FFFFFF;
+        font-size: 14px;
+        background-color: transparent;
+        spacing: 5px;
+    }

@@ -1,0 +1,140 @@
+/* Global Styles */
+QWidget {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+QLabel {
+    color: #ffffff;
+}
+
+QPushButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #45a049;
+}
+
+/* Main Window */
+QMainWindow {
+    background-color: #1e1e1e;
+}
+
+/* Top Bar */
+#dashboardTitle {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+#startWorkoutBtn {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+/* Widget Titles */
+#widgetTitle {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffffff;
+    border: 1px solid #4B0082;
+    border-radius: 4px;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+/* Main Metric */
+#mainMetric {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+#totalPoints {
+    font-size: 28px;
+    font-weight: bold;
+    color: #1E90FF;
+}
+
+/* Leaderboard */
+#leaderboard {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+#leaderboard QLabel {
+    font-size: 14px;
+}
+
+/* Point Distribution */
+#pointDistribution {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* Recent Activities */
+#recentActivities {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+#recentActivities QListWidget {
+    border: none;
+    font-size: 14px;
+    background-color: #2d2d2d;
+    color: #ffffff;
+}
+
+/* AI Coach */
+#aiCoach {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+#aiCoach QLineEdit {
+    padding: 8px;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    background-color: #3d3d3d;
+    color: #ffffff;
+}
+
+#sendButton {
+    background-color: #1E90FF;
+}
+
+#sendButton:hover {
+    background-color: #1c86ee;
+}
+
+/* Chart Styling */
+QChartView {
+    background-color: #2d2d2d;
+}
+
+/* Remove unwanted borders */
+QFrame, QWidget {
+    border: none;
+}
+#widgetFrame {
+        background-color: #2d2d2d;
+        border-radius: 10px;
+}
+#widgetTitle {
+    border: none;
+}
+/* Add this to your dashboard_style.qss file */
+ActivenessGauge {
+    background-color: #2d2d2d;
+    border-radius: 8px;
+}
