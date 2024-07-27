@@ -174,7 +174,6 @@ class ExerciseCounter:
     def __init__(self, analyze_squat_form_callback, thresholds):
         self.curl_counter = 0
         self.bicep_curl_state = BicepCurlState.IDLE
-        self.bicep_curl_analyzer = BicepCurlAnalyzer()
         self.prev_bicep_angle = 180
         self.curl_start_threshold = 160
         self.curl_up_threshold = 90
