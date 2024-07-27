@@ -25,6 +25,8 @@ import datetime
 from dashboard import Dashboard  # Import the Dashboard class
 from threshold_adjuster import ThresholdAdjuster
 from meal_plan_extractor import MealPlanExtractor
+from mistake_track import MistakeTracker
+from update_survey import update_survey_data
 
 class SessionManager:
     def __init__(self, db):
@@ -313,6 +315,10 @@ class WorkoutApp(QMainWindow):
         self.db = ChatDatabase()
         self.is_chat_log_displayed = False
         self.current_chat_messages = []
+        
+        # Innitial mistake track
+        self.mistake_tracker = MistakeTracker()
+        
         # Load styles
         with open("style.qss", "r") as f:
             self.dark_style = f.read()
@@ -1073,6 +1079,11 @@ class WorkoutApp(QMainWindow):
         return landmark_dict
     
     def update_exercise_display(self, exercise_data):
+        
+        # USe MistakeTracker
+        self.mistake_tracker.update_mistakes(exercise_data)
+
+        
         # Create a formatted string with all the exercise information
         info_text = f"""
         BICEP CURLS: {exercise_data['curl_counter']}
@@ -1090,6 +1101,20 @@ class WorkoutApp(QMainWindow):
         
         # Update the exercise info label
         self.exercise_info_label.setText(info_text)
+    
+    # Generate and show mistake report
+    def show_mistakes_report(self):
+        report = self.mistake_tracker.generate_mistakes_report()
+        QMessageBox.information(self, "Mistakes Report", report)
+
+    def save_mistakes_report(self, filename='mistakes_report.txt'):
+        self.mistake_tracker.save_mistakes_report(filename)
+        QMessageBox.information(self, "Report Saved", f"Report saved to {filename}")
+
+    # Add the function to trigger the report generation (e.g., button click event)
+    def create_report_button_clicked(self):
+        self.show_mistakes_report()
+    # Done
 
     def update_exercise_progress_display(self):
         if self.current_exercise:
@@ -1115,6 +1140,22 @@ class WorkoutApp(QMainWindow):
             "goal": self.goal_group.checkedButton().text().lower() if self.goal_group.checkedButton() else "",
             "intensity": self.intensity_group.checkedButton().text().lower() if self.intensity_group.checkedButton() else ""
         }
+        
+        # Start of the link from update_survey.py
+        # Update the survey data in the database
+        update_survey_data(survey_data)
+        
+        # Generate the initial prompt for the AI
+        initial_prompt = self.create_initial_prompt(survey_data)
+        
+        # Send the initial prompt to the AI
+        self.send_message(initial_prompt, is_initial_prompt=True)
+        
+        # Validate the input
+        if not all(survey_data.values()):
+            QMessageBox.warning(self, "Incomplete Form", "Please fill out all fields before submitting.")
+            return
+        # Done linking
         
         # Validate the input
         if not all(survey_data.values()):
@@ -1330,6 +1371,12 @@ class WorkoutApp(QMainWindow):
 
         # Update only the right side with the new workout plan
         self.update_workout_plan_widget()
+        
+        # Button to generate mistakes report
+        report_button = QPushButton("Generate Mistakes Report")
+        report_button.clicked.connect(self.create_report_button_clicked)
+        self.right_layout.addWidget(report_button)
+        # Done
 
     def create_survey_form(self):
         survey_widget = QWidget()
