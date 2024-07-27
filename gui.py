@@ -5,7 +5,8 @@ import os
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton,  QListWidget, QFrame, QTextEdit,
-    QLineEdit, QFormLayout, QRadioButton, QButtonGroup, QStackedWidget, QMessageBox, QStyleFactory,  QSizePolicy, QToolBar
+    QLineEdit, QFormLayout, QRadioButton, QButtonGroup, QStackedWidget, QMessageBox, QStyleFactory,  QSizePolicy, QToolBar,
+    QSlider, QDialog, QDialogButtonBox,QScrollArea
 )
 from PyQt6.QtCore import Qt, QSize, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal, QRectF, pyqtSignal, pyqtProperty, pyqtSlot, QRunnable, QObject, QThreadPool 
 from PyQt6.QtGui import QImage, QPixmap, QIcon, QPainter, QColor, QPalette,  QPen, QBrush
@@ -55,6 +56,135 @@ class SessionManager:
         cursor.execute("INSERT INTO chat_log (session_id, timestamp, sender, message) VALUES (%s, NOW(), %s, %s)",
                        (self.current_session_id, sender, message))
         self.db.connection.commit()
+class StarRating(QWidget):
+    ratingChanged = pyqtSignal(float)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.rating = 0
+        self.setFixedSize(150, 50)
+
+        layout = QVBoxLayout(self)
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(0, 10)  # 0 to 5 stars with half-star precision
+        self.slider.setValue(0)
+        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.slider.setTickInterval(1)
+        self.slider.valueChanged.connect(self.update_rating)
+        layout.addWidget(self.slider)
+
+        self.comment_label = QLabel("", self)
+        self.comment_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.comment_label)
+
+    def update_rating(self, value):
+        self.rating = value / 2
+        self.update()
+        self.update_comment()
+        self.ratingChanged.emit(self.rating)
+
+    def update_comment(self):
+        if self.rating < 3:
+            self.comment_label.setText("Bad")
+        elif self.rating == 3:
+            self.comment_label.setText("Normal")
+        else:
+            self.comment_label.setText("Good")
+
+class ExerciseFeedbackDialog(QDialog):
+    feedbackSubmitted = pyqtSignal(dict)
+
+    def __init__(self, exercise_name, reps_completed, mistakes, parent=None):
+        super().__init__(parent)
+        self.exercise_name = exercise_name
+        self.reps_completed = reps_completed
+        self.mistakes = mistakes
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.setWindowTitle("Exercise Feedback")
+        self.setMinimumWidth(600)  # Increased minimum width for the dialog
+        layout = QVBoxLayout(self)
+
+        # Exercise name (centered)
+        name_label = QLabel(f"<h1>{self.exercise_name}</h1>")
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(name_label)
+
+        # Star rating (centered)
+        self.star_rating = StarRating(self)
+        self.star_rating.setFixedSize(300, 70)  # Increased size of star rating
+        star_layout = QHBoxLayout()
+        star_layout.addStretch()
+        star_layout.addWidget(self.star_rating)
+        star_layout.addStretch()
+        layout.addLayout(star_layout)
+
+        # Reps completed (right-aligned)
+        reps_label = QLabel(f"<h3>Reps completed: {self.reps_completed}</h3>")
+        reps_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(reps_label)
+
+        # Mistakes
+        mistakes_label = QLabel("<h2>Mistakes:</h2>")
+        layout.addWidget(mistakes_label)
+
+        # Scroll area for mistakes
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        self.mistake_widgets = []
+        for mistake in self.mistakes:
+            mistake_layout = QHBoxLayout()
+            mistake_label = QLabel(mistake)
+            mistake_label.setWordWrap(True)
+            mistake_label.setStyleSheet("font-size: 14px;")
+            mistake_layout.addWidget(mistake_label, stretch=1)
+            
+            track_button = QPushButton("Track")
+            ignore_button = QPushButton("Ignore")
+            track_button.setCheckable(True)
+            ignore_button.setCheckable(True)
+            button_group = QButtonGroup(self)
+            button_group.addButton(track_button)
+            button_group.addButton(ignore_button)
+            track_button.setChecked(True)
+            
+            mistake_layout.addWidget(track_button)
+            mistake_layout.addWidget(ignore_button)
+            scroll_layout.addLayout(mistake_layout)
+            self.mistake_widgets.append((mistake, button_group))
+
+        scroll_area.setWidget(scroll_content)
+        layout.addWidget(scroll_area)
+
+        # OK and Cancel buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setStyleSheet("""
+            QLabel { font-size: 16px; }
+            QPushButton { font-size: 14px; padding: 5px; }
+        """)
+
+    def get_feedback(self):
+        feedback = {
+            "exercise": self.exercise_name,
+            "reps_completed": self.reps_completed,
+            "rating": self.star_rating.rating,
+            "mistakes": [
+                {
+                    "name": mistake,
+                    "continue_tracking": group.checkedButton().text() == "Track"
+                }
+                for mistake, group in self.mistake_widgets
+            ]
+        }
+        return feedback
 class AIWorkerSignals(QObject):
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
@@ -477,12 +607,12 @@ class WorkoutApp(QMainWindow):
                 print(f"Error removing temporary audio file: {str(e)}")
 
     def save_thresholds(self):
-        with open(self.threshold_file, 'w') as f:
+        with open(self.thresholds.json, 'w') as f:
             json.dump(self.video_processor.thresholds, f)
 
     def load_thresholds(self):
-        if os.path.exists(self.threshold_file):
-            with open(self.threshold_file, 'r') as f:
+        if os.path.exists(self.thresholds.json):
+            with open(self.thresholds.json, 'r') as f:
                 loaded_thresholds = json.load(f)
                 self.video_processor.thresholds.update(loaded_thresholds)
 
@@ -666,6 +796,71 @@ class WorkoutApp(QMainWindow):
             self.current_exercise = None
             self.reps_left = 0
         self.last_announced_rep = None  # Reset for the new exercise
+
+    def show_exercise_feedback(self):
+        if not hasattr(self, 'video_processor') or not hasattr(self.video_processor, 'exercise_data'):
+            QMessageBox.warning(self, "Error", "Exercise data not available. Please start an exercise first.")
+            return
+
+        if not self.current_exercise:
+            QMessageBox.warning(self, "Error", "No exercise selected. Please select an exercise from the plan.")
+            return
+
+        exercise_name = self.current_exercise['name']
+        exercise_data = self.get_exercise_data()
+        
+        if not exercise_data:
+            QMessageBox.warning(self, "Error", "No exercise data available. Please perform the exercise first.")
+            return
+
+        reps_completed = exercise_data['curl_counter'] if exercise_name.lower() in ['bicep curl', 'curl'] else exercise_data['squat_counter']
+        mistakes = self.get_exercise_mistakes()
+
+        dialog = ExerciseFeedbackDialog(exercise_name, reps_completed, mistakes, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            feedback = dialog.get_feedback()
+            self.process_exercise_feedback(feedback)
+
+    def get_exercise_data(self):
+        return self.video_processor.exercise_data
+
+    def get_exercise_mistakes(self):
+        exercise_data = self.get_exercise_data()
+        if not exercise_data:
+            return []
+
+        if self.current_exercise['name'].lower() in ['bicep curl', 'curl']:
+            return [feedback for feedback in exercise_data['bicep_curl_feedback'] if "Correct form" not in feedback]
+        elif self.current_exercise['name'].lower() == 'squat':
+            return [feedback for feedback in exercise_data['squat_feedback'] if "Correct form" not in feedback]
+        return []
+
+    def process_exercise_feedback(self, feedback):
+        print("Processing feedback:", feedback)
+        # Here you would implement logic to:
+        # 1. Store the feedback for later analysis
+        # 2. Update AI tracking preferences based on 'continue_tracking' for each mistake
+        # 3. Potentially adjust the exercise difficulty or provide personalized tips for next time
+
+        # Example: Updating tracking preferences
+        for mistake in feedback['mistakes']:
+            if not mistake['continue_tracking']:
+                print(f"Disabling tracking for mistake: {mistake['name']}")
+                # Implement logic to stop tracking this specific mistake
+
+        # Example: Adjusting difficulty based on overall rating
+        if feedback['rating'] < 3:
+            print("Considering easier variations for next workout")
+        elif feedback['rating'] > 3:
+            print("Considering more challenging variations for next workout")
+
+        # Reset exercise state
+        self.reset_exercise_state()
+
+    def reset_exercise_state(self):
+        self.current_exercise = None
+        self.video_processor.exercise_counter.reset_counters()
+        self.update_exercise_progress_display()
 
 
     def create_tab_bar(self):
@@ -1291,7 +1486,10 @@ class WorkoutApp(QMainWindow):
             self.camera_label.setStyleSheet("background-color: #3d3d3d; border-radius: 15px;")
             self.camera_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             left_layout.addWidget(self.camera_label, 4)
-
+            # End exercise
+            self.end_exercise_button = QPushButton("End Exercise")
+            self.end_exercise_button.clicked.connect(self.show_exercise_feedback)
+            left_layout.addWidget(self.end_exercise_button)
             # Exercise info display
             self.exercise_info_frame = QFrame()
             self.exercise_info_frame.setStyleSheet("background-color: #2d2d2d; border-radius: 15px; padding: 10px;")
