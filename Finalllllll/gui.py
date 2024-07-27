@@ -501,7 +501,7 @@ class WorkoutApp(QMainWindow):
         chat_layout.addWidget(self.threshold_chat_display)
 
         self.threshold_chat_input = QLineEdit()
-        self.threshold_chat_input.setPlaceholderText("Change the feedback behavior here (e.g., 'Increase the squat too deep threshold')...")
+        self.threshold_chat_input.setPlaceholderText("Change the feedback behavior here...")
         self.threshold_chat_input.returnPressed.connect(self.process_threshold_adjustment)
         chat_layout.addWidget(self.threshold_chat_input)
 
