@@ -1,0 +1,146 @@
+QWidget {
+    background-color: #121212;
+    color: #FFFFFF;
+    font-family: Arial, sans-serif;
+}
+
+#account1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+QLineEdit {
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+}
+
+QLineEdit:focus {
+    border-color: #FFFFFF;
+}
+
+#signUpButton {
+    background-color: #FFFFFF;
+    color: #000000;
+    border: none;
+    border-radius: 4px;
+    padding: 10px;
+    font-weight: bold;
+}
+
+#signUpButton:hover {
+    background-color: #E0E0E0;
+}
+
+#termsCheckbox {
+    margin-right: 5px;
+}
+
+#termsLabel {
+    color: #BBBBBB;
+}
+
+#orDivider {
+    color: #BBBBBB;
+    margin: 10px 0;
+}
+
+#socialButton {
+    background-color: #1E1E1E;
+    color: #FFFFFF;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#socialButton:hover {
+    background-color: #2A2A2A;
+}
+
+#backToLoginButton {
+    color: #4285F4;
+    background: none;
+    border: none;
+    text-decoration: underline;
+}
+
+#backToLoginButton:hover {
+    color: #5C9FFF;
+}
+
+QWidget {
+    background-color: #121212;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+}
+
+#logo {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#title {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+#subtitle {
+    font-size: 16px;
+    color: #bbbbbb;
+}
+
+QLineEdit {
+    border: none;
+    border-bottom: 1px solid #444444;
+    padding: 10px 0;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: transparent;
+}
+
+QLineEdit:focus {
+    border-bottom: 2px solid #4285f4;
+}
+
+QPushButton#signUpButton {
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+QPushButton#signUpButton:hover {
+    background-color: #3367d6;
+}
+
+QPushButton[objectName="socialButton"] {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    border: 1px solid #444444;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 5px;
+}
+
+QPushButton[objectName="socialButton"]:hover {
+    background-color: #2a2a2a;
+}
+
+#loginLink {
+    background: none;
+    border: none;
+    color: #4285f4;
+    font-size: 14px;
+}
+
+#loginLink:hover {
+    text-decoration: underline;
+}
