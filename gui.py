@@ -488,6 +488,8 @@ class WorkoutApp(QMainWindow):
         # Initialize theme manager
         self.theme_manager = ThemeManager()
         self.theme_manager.set_dark_theme(QApplication.instance())
+        
+        
         self.threshold_file = "thresholds.json"
         self.load_thresholds()
 
