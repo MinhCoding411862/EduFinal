@@ -26,7 +26,7 @@ import datetime
 from dashboard import Dashboard  # Import the Dashboard class
 from threshold_adjuster import ThresholdAdjuster
 from meal_plan_extractor import MealPlanExtractor
-
+from db_manager import update_exercise_score, save_exercise_feedback, setup_database, get_score_data
 class SessionManager:
     def __init__(self, db):
         self.db = db
@@ -99,92 +99,62 @@ class ExerciseFeedbackDialog(QDialog):
         self.exercise_name = exercise_name
         self.reps_completed = reps_completed
         self.mistakes = mistakes
+        self.confirmed_mistakes = []  # New list to track confirmed mistakes
         self.setup_ui()
 
     def setup_ui(self):
-        self.setWindowTitle("Exercise Feedback")
-        self.setMinimumWidth(600)  # Increased minimum width for the dialog
+        self.setWindowTitle("Exercise Report")
+        self.setMinimumWidth(400)
         layout = QVBoxLayout(self)
 
-        # Exercise name (centered)
-        name_label = QLabel(f"<h1>{self.exercise_name}</h1>")
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(name_label)
-
-        # Star rating (centered)
         self.star_rating = StarRating(self)
-        self.star_rating.setFixedSize(300, 70)  # Increased size of star rating
-        star_layout = QHBoxLayout()
-        star_layout.addStretch()
-        star_layout.addWidget(self.star_rating)
-        star_layout.addStretch()
-        layout.addLayout(star_layout)
+        layout.addWidget(self.star_rating)
 
-        # Reps completed (right-aligned)
-        reps_label = QLabel(f"<h3>Reps completed: {self.reps_completed}</h3>")
-        reps_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        layout.addWidget(reps_label)
+        layout.addWidget(QLabel(f"Exercise completed: {self.exercise_name}"))
+        layout.addWidget(QLabel(f"Reps completed: {self.reps_completed}"))
 
-        # Mistakes
-        mistakes_label = QLabel("<h2>Mistakes:</h2>")
-        layout.addWidget(mistakes_label)
+        if self.mistakes:
+            layout.addWidget(QLabel("You made the following mistakes:"))
+            self.mistake_widgets = []
+            for mistake in self.mistakes:
+                mistake_layout = QHBoxLayout()
+                mistake_label = QLabel(mistake)
+                mistake_layout.addWidget(mistake_label)
+                
+                yes_button = QPushButton("Yes")
+                no_button = QPushButton("No")
+                yes_button.clicked.connect(lambda _, m=mistake: self.handle_mistake_response(m, True))
+                no_button.clicked.connect(lambda _, m=mistake: self.handle_mistake_response(m, False))
+                
+                mistake_layout.addWidget(yes_button)
+                mistake_layout.addWidget(no_button)
+                layout.addLayout(mistake_layout)
+                self.mistake_widgets.append((mistake, yes_button, no_button))
+        else:
+            layout.addWidget(QLabel("Great job! No mistakes were detected."))
 
-        # Scroll area for mistakes
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_content = QWidget()
-        scroll_layout = QVBoxLayout(scroll_content)
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button)
 
-        self.mistake_widgets = []
-        for mistake in self.mistakes:
-            mistake_layout = QHBoxLayout()
-            mistake_label = QLabel(mistake)
-            mistake_label.setWordWrap(True)
-            mistake_label.setStyleSheet("font-size: 14px;")
-            mistake_layout.addWidget(mistake_label, stretch=1)
-            
-            track_button = QPushButton("Track")
-            ignore_button = QPushButton("Ignore")
-            track_button.setCheckable(True)
-            ignore_button.setCheckable(True)
-            button_group = QButtonGroup(self)
-            button_group.addButton(track_button)
-            button_group.addButton(ignore_button)
-            track_button.setChecked(True)
-            
-            mistake_layout.addWidget(track_button)
-            mistake_layout.addWidget(ignore_button)
-            scroll_layout.addLayout(mistake_layout)
-            self.mistake_widgets.append((mistake, button_group))
+    def handle_mistake_response(self, mistake, confirm):
+        for widget in self.mistake_widgets:
+            if widget[0] == mistake:
+                widget[1].setEnabled(False)
+                widget[2].setEnabled(False)
+                if confirm:
+                    self.confirmed_mistakes.append(mistake)
+                break
+        print(f"Mistake '{mistake}' confirmed: {confirm}")
 
-        scroll_area.setWidget(scroll_content)
-        layout.addWidget(scroll_area)
 
-        # OK and Cancel buttons
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-        self.setStyleSheet("""
-            QLabel { font-size: 16px; }
-            QPushButton { font-size: 14px; padding: 5px; }
-        """)
 
     def get_feedback(self):
-        feedback = {
+        return {
             "exercise": self.exercise_name,
             "reps_completed": self.reps_completed,
-            "rating": self.star_rating.rating,
-            "mistakes": [
-                {
-                    "name": mistake,
-                    "continue_tracking": group.checkedButton().text() == "Track"
-                }
-                for mistake, group in self.mistake_widgets
-            ]
+            "mistakes": self.confirmed_mistakes  # Only return confirmed mistakes
         }
-        return feedback
 class AIWorkerSignals(QObject):
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
@@ -452,10 +422,12 @@ class WorkoutApp(QMainWindow):
         # Set initial style to dark
         self.setStyleSheet(self.dark_style)
 
+        self.video_processor = VideoProcessor()
         self.scoreboard = ScoreBoard()  
         self.dashboard = None
-
-
+        
+        # Intialize the database
+        setup_database()
         # Create central stacked widget
         self.central_stacked_widget = QStackedWidget()
         self.setCentralWidget(self.central_stacked_widget)
@@ -539,7 +511,7 @@ class WorkoutApp(QMainWindow):
          # Initialize camera-related attributes
         self.capture = None
         self.timer = None
-        self.video_processor = VideoProcessor()
+        
         # Set up camera
         self.setup_camera()
 
@@ -609,12 +581,12 @@ class WorkoutApp(QMainWindow):
                 print(f"Error removing temporary audio file: {str(e)}")
 
     def save_thresholds(self):
-        with open(self.thresholds.json, 'w') as f:
+        with open(self.threshold_file, 'w') as f:
             json.dump(self.video_processor.thresholds, f)
 
     def load_thresholds(self):
-        if os.path.exists(self.thresholds.json):
-            with open(self.thresholds.json, 'r') as f:
+        if os.path.exists(self.threshold_file):
+            with open(self.threshold_file, 'r') as f:
                 loaded_thresholds = json.load(f)
                 self.video_processor.thresholds.update(loaded_thresholds)
 
@@ -734,6 +706,11 @@ class WorkoutApp(QMainWindow):
             self.current_exercise = None
             self.exercise_progress_label.setText("No exercises in the plan")
 
+    def get_exercise_data(self):
+        if hasattr(self.video_processor, 'exercise_data'):
+            return self.video_processor.exercise_data
+        return None
+    
     def main_workout_loop(self):
         if self.capture is None or not self.capture.isOpened():
             return
@@ -800,10 +777,6 @@ class WorkoutApp(QMainWindow):
         self.last_announced_rep = None  # Reset for the new exercise
 
     def show_exercise_feedback(self):
-        if not hasattr(self, 'video_processor') or not hasattr(self.video_processor, 'exercise_data'):
-            QMessageBox.warning(self, "Error", "Exercise data not available. Please start an exercise first.")
-            return
-
         if not self.current_exercise:
             QMessageBox.warning(self, "Error", "No exercise selected. Please select an exercise from the plan.")
             return
@@ -815,56 +788,95 @@ class WorkoutApp(QMainWindow):
             QMessageBox.warning(self, "Error", "No exercise data available. Please perform the exercise first.")
             return
 
-        reps_completed = exercise_data['curl_counter'] if exercise_name.lower() in ['bicep curl', 'curl'] else exercise_data['squat_counter']
-        mistakes = self.get_exercise_mistakes()
-
+        reps_completed = exercise_data.get('curl_counter', 0) if exercise_name.lower() in ['bicep curl', 'curl'] else exercise_data.get('squat_counter', 0)
+        mistakes = self.get_exercise_mistakes(exercise_data, exercise_name)
+        
         dialog = ExerciseFeedbackDialog(exercise_name, reps_completed, mistakes, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             feedback = dialog.get_feedback()
             self.process_exercise_feedback(feedback)
 
-    def get_exercise_data(self):
-        return self.video_processor.exercise_data
-
-    def get_exercise_mistakes(self):
-        exercise_data = self.get_exercise_data()
+    def get_exercise_mistakes(self, exercise_data, exercise_name):
         if not exercise_data:
             return []
 
-        if self.current_exercise['name'].lower() in ['bicep curl', 'curl']:
-            return [feedback for feedback in exercise_data['bicep_curl_feedback'] if "Correct form" not in feedback]
-        elif self.current_exercise['name'].lower() == 'squat':
-            return [feedback for feedback in exercise_data['squat_feedback'] if "Correct form" not in feedback]
+        if exercise_name.lower() in ['bicep curl', 'curl']:
+            return exercise_data.get('bicep_curl_feedback', [])
+        elif exercise_name.lower() == 'squat':
+            return exercise_data.get('squat_feedback', [])
         return []
 
+    def calculate_score(self, reps_completed, total_reps):
+        # Calculate score using the provided formula
+        score = (reps_completed / total_reps) * 10
+        # Round up to one decimal place
+        return math.ceil(score * 10) / 10
+    
+    def update_exercise_score(self, exercise_name, score):
+        # Call the update_exercise_score function from db_manager
+        update_exercise_score(exercise_name, score)
+
     def process_exercise_feedback(self, feedback):
-        print("Processing feedback:", feedback)
-        # Here you would implement logic to:
-        # 1. Store the feedback for later analysis
-        # 2. Update AI tracking preferences based on 'continue_tracking' for each mistake
-        # 3. Potentially adjust the exercise difficulty or provide personalized tips for next time
+        exercise_name = feedback['exercise']
+        confirmed_mistakes = feedback['mistakes']  # This now contains only confirmed mistakes
+        reps_completed = feedback['reps_completed']
+        
+        logging.info(f"Processing feedback for {exercise_name}")
+        logging.info(f"Confirmed mistakes: {confirmed_mistakes}")
 
-        # Example: Updating tracking preferences
-        for mistake in feedback['mistakes']:
-            if not mistake['continue_tracking']:
-                print(f"Disabling tracking for mistake: {mistake['name']}")
-                # Implement logic to stop tracking this specific mistake
+        # Update the exercise_data with only the confirmed mistakes
+        if exercise_name.lower() in ['bicep curl', 'curl']:
+            self.video_processor.exercise_data['bicep_curl_feedback'] = confirmed_mistakes
+            exercise_type = 'bicep_curl'
+        elif exercise_name.lower() == 'squat':
+            self.video_processor.exercise_data['squat_feedback'] = confirmed_mistakes
+            exercise_type = 'squat'
+        else:
+            logging.warning(f"Unsupported exercise type: {exercise_name}")
+            return
 
-        # Example: Adjusting difficulty based on overall rating
-        if feedback['rating'] < 3:
-            print("Considering easier variations for next workout")
-        elif feedback['rating'] > 3:
-            print("Considering more challenging variations for next workout")
+        # Update the workout display
+        self.update_workout_display(self.video_processor.exercise_data)
 
-        # Reset exercise state
-        self.reset_exercise_state()
+        # Calculate score based on completed reps
+        total_reps = self.current_exercise['reps'] * self.current_exercise['sets']
+        score = self.calculate_score(reps_completed, total_reps)
+        
+        logging.info(f"Calculated score: {score}")
+
+        # Update the database with the score
+        self.update_exercise_score(exercise_type, score)
+
+        # Save exercise feedback to the database
+        save_exercise_feedback(exercise_type, reps_completed, confirmed_mistakes, score)
+
+        # Show the final message and close the app
+        self.show_final_message()
+
+    def show_final_message(self):
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Workout Complete")
+        msg_box.setText("See you again!")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.setIcon(QMessageBox.Icon.Information)
+        
+        # Connect the buttonClicked signal to a lambda function that closes the app
+        msg_box.buttonClicked.connect(lambda _: self.close())
+        
+        msg_box.exec()
+    def closeEvent(self, event):
+        # This method is called when the window is about to be closed
+        self.stop_camera()
+        super().closeEvent(event)
 
     def reset_exercise_state(self):
         self.current_exercise = None
         self.video_processor.exercise_counter.reset_counters()
         self.update_exercise_progress_display()
+    
+    
 
-
+    
     def create_tab_bar(self):
         self.tab_bar = self.TabBar()
         self.tab_bar.addTab("home_icon.png", "Home")

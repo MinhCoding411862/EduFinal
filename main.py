@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication
-from login import LoginPage
-from back2back import Dashboard  # Assuming your dashboard class is in a file named dashboard.py
+from sign_up import LoginPage
+from dashboard import Dashboard  # Assuming your dashboard class is in a file named dashboard.py
 
 class MainApplication:
     def __init__(self):
