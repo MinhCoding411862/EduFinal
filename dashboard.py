@@ -355,7 +355,7 @@ class Dashboard(QMainWindow):
         return frame
 
     def create_activeness_rate(self):
-        frame, layout = self.create_widget_frame("Activeness Rate")
+        frame, layout = self.create_widget_frame("Workout Plan Complete Rate")
         
         score_data, _ = get_score_data()
         days_considered = min(30, len(score_data))
